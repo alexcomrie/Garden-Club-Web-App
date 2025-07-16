@@ -84,9 +84,10 @@ export default function ImageViewer({
     
     // On retry, try alternative format
     if (retryCount > 0 && imageUrl.includes('drive.google.com')) {
-      const match = imageUrl.match(/\/d\/([a-zA-Z0-9_-]+)|\/file\/d\/([a-zA-Z0-9_-]+)/);
+      // Extract file ID from various Google Drive URL formats
+      const match = imageUrl.match(/\/d\/([a-zA-Z0-9_-]+)|\/file\/d\/([a-zA-Z0-9_-]+)|[?&]id=([a-zA-Z0-9_-]+)|open\?id=([a-zA-Z0-9_-]+)/);
       if (match) {
-        const fileId = match[1] || match[2];
+        const fileId = match[1] || match[2] || match[3] || match[4];
         return `https://lh3.googleusercontent.com/d/${fileId}?t=${refreshKey}`;
       }
     }
