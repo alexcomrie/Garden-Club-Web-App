@@ -30,22 +30,40 @@ async function testDirectImageUrl(url: string): Promise<boolean> {
   if (!url) return false;
   try {
     const directUrl = getDirectImageUrl(url);
-    const response = await fetch(directUrl, { method: 'HEAD' });
+    console.log('Testing image URL:', directUrl);
+    
+    const response = await fetch(directUrl, { 
+      method: 'HEAD',
+      mode: 'no-cors' // Handle CORS issues
+    });
     return response.ok;
   } catch (e) {
-    console.warn('Failed to test image URL:', url, e);
-    return false;
+    console.warn('Failed to test image URL:', url, 'Error:', e);
+    
+    // Try alternative method - attempt to load as image
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve(true);
+      img.onerror = () => resolve(false);
+      img.src = getDirectImageUrl(url);
+      
+      // Timeout after 5 seconds
+      setTimeout(() => resolve(false), 5000);
+    });
   }
 }
 
 
 function productFromCsv(row: string[]): Product {
+  const imageUrl = row[4] ? getDirectImageUrl(row[4]) : '';
+  console.log('Processing product:', row[0], 'Image URL:', imageUrl);
+  
   return {
     name: row[0] || '',
     category: row[1] || 'Other',
     price: parseFloat(row[2]) || 0,
     description: row[3] || '',
-    imageUrl: row[4] ? getDirectImageUrl(row[4]) : '',
+    imageUrl: imageUrl,
     inStock: row[5]?.toLowerCase() === 'in stock'
   };
 }
@@ -148,6 +166,9 @@ function parseCSV(csvText: string): string[][] {
 }
 
 function businessFromCsv(row: string[]): Business {
+  const profilePictureUrl = row[10] || '';
+  console.log('Processing business:', row[0], 'Profile URL:', profilePictureUrl);
+  
   return {
     id: row[0].toLowerCase().replace(/\s+/g, '_'),
     name: row[0] || '',
@@ -160,7 +181,7 @@ function businessFromCsv(row: string[]): Business {
     deliveryArea: row[7] || '',
     operationHours: row[8] || '',
     specialHours: row[9] || '',
-    profilePictureUrl: row[10] || '',
+    profilePictureUrl: profilePictureUrl,
     productSheetUrl: row[11] || '',
     status: (row[12] || '').toLowerCase(),
     bio: row[13] || '',
@@ -219,7 +240,6 @@ async function fetchBusinessesFromNetwork(): Promise<Business[]> {
 
     const csvText = await response.text();
     console.log('CSV Response length:', csvText.length);
-    console.log('CSV Response preview:', csvText.substring(0, 500));
     
     if (!csvText || csvText.trim().length === 0) {
       throw new Error('Empty response from server');
@@ -227,8 +247,13 @@ async function fetchBusinessesFromNetwork(): Promise<Business[]> {
     
     const businesses = parseBusinessesCSV(csvText);
     console.log('Parsed businesses count:', businesses.length);
-    businesses.forEach((business, index) => {
-      console.log(`Business ${index + 1}:`, business.name, 'Status:', business.status, 'Profile URL:', business.profilePictureUrl);
+    
+    // Log businesses with image issues
+    businesses.forEach((business) => {
+      if (business.profilePictureUrl && business.profilePictureUrl.includes('drive.google.com')) {
+        console.log(`Business "${business.name}" has Google Drive image:`, business.profilePictureUrl);
+        console.log('Converted URL:', getDirectImageUrl(business.profilePictureUrl));
+      }
     });
     
     if (businesses.length === 0) {
@@ -354,15 +379,47 @@ async function loadProducts(productSheetUrl: string): Promise<Map<string, Produc
 function getDirectImageUrl(url: string): string {
   if (!url) return '';
   if (url.includes('drive.google.com')) {
-    // Extract file ID from Google Drive URL for both formats
-    const regExp = /\/d\/([a-zA-Z0-9_-]+)|\/file\/d\/([a-zA-Z0-9_-]+)/;
-    const match = regExp.exec(url);
+    console.log('Processing Google Drive URL:', url);
+    
+    // Handle different Google Drive URL formats
+    let fileId = null;
+    
+    // Format 1: /file/d/FILE_ID/view
+    let match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
     if (match) {
-      const fileId = match[1] || match[2];
-      if (fileId) {
-        // Use export=view instead of export=download for better compatibility
-        return `https://drive.google.com/uc?export=view&id=${fileId}`;
+      fileId = match[1];
+    }
+    
+    // Format 2: /d/FILE_ID/view
+    if (!fileId) {
+      match = url.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      if (match) {
+        fileId = match[1];
       }
+    }
+    
+    // Format 3: ?id=FILE_ID
+    if (!fileId) {
+      match = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+      if (match) {
+        fileId = match[1];
+      }
+    }
+    
+    // Format 4: open?id=FILE_ID
+    if (!fileId) {
+      match = url.match(/open\?id=([a-zA-Z0-9_-]+)/);
+      if (match) {
+        fileId = match[1];
+      }
+    }
+    
+    if (fileId) {
+      const directUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+      console.log('Converted Google Drive URL:', directUrl);
+      return directUrl;
+    } else {
+      console.warn('Could not extract file ID from Google Drive URL:', url);
     }
   }
   return url;

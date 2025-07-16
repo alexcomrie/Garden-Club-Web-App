@@ -21,37 +21,77 @@ export default function ImageViewer({
 }: ImageViewerProps) {
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
+    // Preload the image to check if it's accessible
+    if (imageUrl) {
+      const directUrl = BusinessService.getDirectImageUrl(imageUrl);
+      console.log('Preloading image:', directUrl);
+      
+      preloadImage(directUrl).then((success) => {
+        if (!success) {
+          console.warn('Image preload failed, will try alternative formats');
+        }
+      });
+    }
+    
     setError(false);
     setLoading(true);
+    setRetryCount(0);
     setScale(1);
     setPosition({ x: 0, y: 0 });
   }, [imageUrl, refreshKey]);
 
   if (!imageUrl) {
+    console.warn('ImageViewer: No image URL provided');
     return (
       <div className={`bg-gray-100 flex items-center justify-center ${className}`}>
-        <img
-          src="/images/placeholder.png"
-          alt="Placeholder"
-          className="w-24 h-24 opacity-50"
-        />
+        <div className="w-24 h-24 bg-gray-300 rounded flex items-center justify-center">
+          <span className="text-gray-500 text-xs">No Image</span>
+        </div>
       </div>
     );
   }
 
   const handleError = () => {
+    console.error('Image failed to load:', imageUrl);
+    
+    // Try alternative URL format if this is the first retry
+    if (retryCount === 0 && imageUrl.includes('drive.google.com')) {
+      setRetryCount(1);
+      setLoading(true);
+      return; // Don't set error yet, let it retry
+    }
+    
     setError(true);
     setLoading(false);
     onError?.();
   };
 
   const handleLoad = () => {
+    console.log('Image loaded successfully:', imageUrl);
     setLoading(false);
+  };
+
+  // Get the image URL with retry logic
+  const getImageUrl = () => {
+    const directUrl = BusinessService.getDirectImageUrl(imageUrl);
+    const urlWithRefresh = `${directUrl}${directUrl.includes('?') ? '&' : '?'}t=${refreshKey}`;
+    
+    // On retry, try alternative format
+    if (retryCount > 0 && imageUrl.includes('drive.google.com')) {
+      const match = imageUrl.match(/\/d\/([a-zA-Z0-9_-]+)|\/file\/d\/([a-zA-Z0-9_-]+)/);
+      if (match) {
+        const fileId = match[1] || match[2];
+        return `https://lh3.googleusercontent.com/d/${fileId}?t=${refreshKey}`;
+      }
+    }
+    
+    return urlWithRefresh;
   };
 
   const handleZoom = (event: WheelEvent) => {
@@ -81,11 +121,9 @@ export default function ImageViewer({
   if (error) {
     return (
       <div className={`bg-gray-100 flex items-center justify-center ${className}`}>
-        <img
-          src="/images/placeholder.png"
-          alt="Placeholder"
-          className="w-24 h-24 opacity-50"
-        />
+        <div className="w-24 h-24 bg-gray-300 rounded flex items-center justify-center">
+          <span className="text-gray-500 text-xs">Failed to Load</span>
+        </div>
       </div>
     );
   }
@@ -98,7 +136,7 @@ export default function ImageViewer({
       style={{ overflow: 'hidden' }}
     >
       <img
-        src={`${BusinessService.getDirectImageUrl(imageUrl)}?t=${refreshKey}`}
+        src={getImageUrl()}
         alt={alt}
         className={`w-full h-full object-cover transition-opacity duration-300 ${loading ? 'opacity-0' : 'opacity-100'}`}
         style={{
@@ -108,6 +146,7 @@ export default function ImageViewer({
         onError={handleError}
         onLoad={handleLoad}
         loading="lazy"
+        crossOrigin="anonymous"
       />
       {loading && (
         <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">

@@ -33,8 +33,9 @@ export default function BusinessCard({ business, onRefresh, lastRefreshTime = Da
       onClick={handleClick}
     >
       <div className="relative h-48 overflow-hidden">
-        {business.profilePictureUrl && !imageError ? (
+        {business.profilePictureUrl ? (
           <div className="relative w-full h-full">
+            {console.log('BusinessCard: Loading image for', business.name, business.profilePictureUrl)}
             <ImageViewer
               imageUrl={business.profilePictureUrl}
               alt={business.name}
@@ -63,7 +64,14 @@ export default function BusinessCard({ business, onRefresh, lastRefreshTime = Da
           </div>
         ) : (
           <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-            <Store className="w-12 h-12 text-gray-400" />
+            {imageError ? (
+              <div className="text-center">
+                <Store className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                <p className="text-xs text-gray-500">Image failed to load</p>
+              </div>
+            ) : (
+              <Store className="w-12 h-12 text-gray-400" />
+            )}
           </div>
         )}
       </div>

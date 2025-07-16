@@ -97,6 +97,7 @@ export default function GardenProfile({ params }: GardenProfileProps) {
         {/* Profile Image */}
         {business.profilePictureUrl && (
           <Card>
+            {console.log('GardenProfile: Loading profile image for', business.name, business.profilePictureUrl)}
             <CardContent className="p-4">
               <div className="w-full h-64 overflow-hidden rounded-lg">
                 <ImageViewer

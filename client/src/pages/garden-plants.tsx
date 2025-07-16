@@ -170,6 +170,7 @@ export default function GardenPlants({ params }: GardenPlantsProps) {
                     {/* Product Image */}
                     {product.imageUrl && (
                       <div className="flex-shrink-0">
+                        {console.log('GardenPlants: Loading product image', product.name, product.imageUrl)}
                         <div 
                           className="w-24 h-24 rounded-lg overflow-hidden bg-gray-100 cursor-pointer" 
                           onClick={() => setSelectedImage(product.imageUrl)}
@@ -179,6 +180,7 @@ export default function GardenPlants({ params }: GardenPlantsProps) {
                             alt={product.name}
                             className="w-full h-full"
                             refreshKey={lastRefreshTime}
+                            onError={() => console.error('Failed to load product image:', product.name, product.imageUrl)}
                           />
                         </div>
                       </div>
