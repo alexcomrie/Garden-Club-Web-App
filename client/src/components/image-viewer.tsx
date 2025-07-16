@@ -21,7 +21,6 @@ export default function ImageViewer({
 }: ImageViewerProps) {
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [retryCount, setRetryCount] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -41,7 +40,6 @@ export default function ImageViewer({
     
     setError(false);
     setLoading(true);
-    setRetryCount(0);
     setScale(1);
     setPosition({ x: 0, y: 0 });
   }, [imageUrl, refreshKey]);
@@ -59,14 +57,6 @@ export default function ImageViewer({
 
   const handleError = () => {
     console.error('Image failed to load:', imageUrl);
-    
-    // Try alternative URL format if this is the first retry
-    if (retryCount === 0 && imageUrl.includes('drive.google.com')) {
-      setRetryCount(1);
-      setLoading(true);
-      return; // Don't set error yet, let it retry
-    }
-    
     setError(true);
     setLoading(false);
     onError?.();
@@ -80,19 +70,7 @@ export default function ImageViewer({
   // Get the image URL with retry logic
   const getImageUrl = () => {
     const directUrl = BusinessService.getDirectImageUrl(imageUrl);
-    const urlWithRefresh = `${directUrl}${directUrl.includes('?') ? '&' : '?'}t=${refreshKey}`;
-    
-    // On retry, try alternative format
-    if (retryCount > 0 && imageUrl.includes('drive.google.com')) {
-      // Extract file ID from various Google Drive URL formats
-      const match = imageUrl.match(/\/d\/([a-zA-Z0-9_-]+)|\/file\/d\/([a-zA-Z0-9_-]+)|[?&]id=([a-zA-Z0-9_-]+)|open\?id=([a-zA-Z0-9_-]+)/);
-      if (match) {
-        const fileId = match[1] || match[2] || match[3] || match[4];
-        return `https://lh3.googleusercontent.com/d/${fileId}?t=${refreshKey}`;
-      }
-    }
-    
-    return urlWithRefresh;
+    return `${directUrl}${directUrl.includes('?') ? '&' : '?'}t=${refreshKey}`;
   };
 
   const handleZoom = (event: WheelEvent) => {

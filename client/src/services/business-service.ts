@@ -415,7 +415,7 @@ function getDirectImageUrl(url: string): string {
     }
     
     if (fileId) {
-      const directUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+      const directUrl = `https://lh3.googleusercontent.com/d/${fileId}`;
       console.log('Converted Google Drive URL:', directUrl);
       return directUrl;
     } else {
