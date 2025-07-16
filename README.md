@@ -39,6 +39,16 @@ npm install
 npm run dev
 ```
 
+## Deployment
+
+This project is configured for deployment on Vercel:
+
+1. Push your code to GitHub
+2. Visit [Vercel](https://vercel.com)
+3. Import your repository
+4. Vercel will automatically detect the build configuration
+5. Your app will be deployed automatically!
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
