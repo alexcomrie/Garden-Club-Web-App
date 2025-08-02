@@ -15,7 +15,7 @@ export default function Settings() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setLocation('/garden-list')}
+            onClick={() => setLocation('/')}
             className="text-white hover:bg-white/10"
           >
             <ArrowLeft className="w-6 h-6" />
